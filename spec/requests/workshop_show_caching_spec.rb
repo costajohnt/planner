@@ -51,4 +51,39 @@ RSpec.describe 'Workshop show page caching' do
 
     expect(response).to have_http_status(:not_modified)
   end
+
+  it 'serves a fresh 200 after the host sponsor changes so repeat anonymous visits are not stale' do
+    get workshop_path(workshop)
+    etag = response.headers['etag']
+
+    workshop.host.update!(name: "#{workshop.host.name} updated")
+
+    get workshop_path(workshop), headers: { 'HTTP_IF_NONE_MATCH' => etag }
+
+    expect(response).to have_http_status(:ok)
+  end
+
+  context 'when the workshop is virtual' do
+    let(:workshop) { Fabricate(:virtual_workshop_sponsored) }
+
+    it 'renders the virtual show page with virtual content and stores its fragments' do
+      get workshop_path(workshop)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include('Virtual workshop for')
+
+      fragment_keys = fragment_store.instance_variable_get(:@data).keys
+      expect(fragment_keys.grep(/virtual_workshop_sponsors/)).to be_present
+      expect(fragment_keys.grep(/virtual_workshop_organisers/)).to be_present
+    end
+
+    it 'serves a 304 to anonymous conditional requests through the full stack' do
+      get workshop_path(workshop)
+      etag = response.headers['etag']
+
+      get workshop_path(workshop), headers: { 'HTTP_IF_NONE_MATCH' => etag }
+
+      expect(response).to have_http_status(:not_modified)
+    end
+  end
 end

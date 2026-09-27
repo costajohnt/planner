@@ -367,5 +367,27 @@ RSpec.describe Workshop do
 
       expect(workshop.reload.description).to eq('<p>Plain and safe</p>')
     end
+
+    describe 'SanitizeWorkshopDescriptions backfill' do
+      require Rails.root.join('db/migrate/20260927222832_sanitize_workshop_descriptions').to_s
+      it 'sanitizes raw descriptions written before the callback and bumps updated_at' do
+        workshop = Fabricate(:workshop, description: '<p>Plain and safe</p>')
+        # Bypass the sanitize callback to simulate a row written before it existed.
+        workshop.update_columns(description: '<p>Hello <script>alert(1)</script><b>codebar</b></p>')
+        previous_updated_at = workshop.reload.updated_at
+
+        SanitizeWorkshopDescriptions.new.up
+
+        expect(workshop.reload.description).to eq('<p>Hello alert(1)<b>codebar</b></p>')
+        expect(workshop.updated_at).to be > previous_updated_at
+      end
+
+      it 'skips already sanitized descriptions, leaving updated_at unchanged' do
+        workshop = Fabricate(:workshop, description: '<p>Plain and safe</p>')
+
+        expect { SanitizeWorkshopDescriptions.new.up }
+          .not_to(change { workshop.reload.updated_at })
+      end
+    end
   end
 end
