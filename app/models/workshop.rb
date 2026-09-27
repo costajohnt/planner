@@ -130,7 +130,10 @@ class Workshop < ApplicationRecord
   end
 
   # Descriptions are rendered with html_safe on the workshop show pages, so they
-  # must only ever be stored after sanitization.
+  # must only ever be stored after sanitization. This method is the enforcement
+  # point: route any future description writer (rake task, import, API) through
+  # it, and treat it as pinned by the SanitizeWorkshopDescriptions backfill —
+  # changing the sanitizer policy here changes what that migration replays.
   def self.sanitized_description(text)
     ActionController::Base.helpers.sanitize(text)
   end
