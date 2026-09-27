@@ -39,6 +39,7 @@ class Workshop < ApplicationRecord
   before_validation :set_date_and_time, :set_end_date_and_time,
                     :set_opens_at, :set_closes_at,
                     if: proc { |model| model.chapter_id.present? }
+  before_validation :sanitize_description
   validate :rsvp_date_time_fields_must_be_paired
   validate :rsvp_close_before_workshop_start
 
@@ -129,6 +130,14 @@ class Workshop < ApplicationRecord
   end
 
   private
+
+  # Descriptions are rendered with html_safe on the workshop show pages, so they
+  # must only ever be stored after sanitization.
+  def sanitize_description
+    return if description.blank?
+
+    self.description = ActionController::Base.helpers.sanitize(description)
+  end
 
   def set_opens_at
     new_opens_at = datetime_from_fields(rsvp_open_local_date, rsvp_open_local_time)

@@ -3,6 +3,8 @@ class WorkshopsController < ApplicationController
   before_action :set_workshop, only: %i[show rsvp]
 
   def show
+    fresh_when(@workshop, etag: [@workshop, I18n.locale, :v1]) unless logged_in?
+
     @workshop = WorkshopPresenter.decorate(@workshop)
 
     render 'virtual_workshops/show' if @workshop.virtual?

@@ -351,4 +351,21 @@ RSpec.describe Workshop do
       expect(codes.uniq.length).to eq(3)
     end
   end
+
+  describe 'description sanitization' do
+    it 'removes disallowed HTML when a description is saved' do
+      workshop = Fabricate(:workshop, description: '<p>Hello <script>alert(1)</script><b>codebar</b></p>')
+
+      description = workshop.reload.description
+
+      # The Rails HTML5 sanitizer keeps script text as plain text and strips the tag.
+      expect(description).to eq('<p>Hello alert(1)<b>codebar</b></p>')
+    end
+
+    it 'leaves an already clean description unchanged' do
+      workshop = Fabricate(:workshop, description: '<p>Plain and safe</p>')
+
+      expect(workshop.reload.description).to eq('<p>Plain and safe</p>')
+    end
+  end
 end
