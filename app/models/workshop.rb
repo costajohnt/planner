@@ -129,14 +129,18 @@ class Workshop < ApplicationRecord
     rsvp_closes_at || super
   end
 
-  private
-
   # Descriptions are rendered with html_safe on the workshop show pages, so they
   # must only ever be stored after sanitization.
-  def sanitize_description
-    return if description.blank?
+  def self.sanitized_description(text)
+    ActionController::Base.helpers.sanitize(text)
+  end
 
-    self.description = ActionController::Base.helpers.sanitize(description)
+  private
+
+  def sanitize_description
+    return if description.blank? || !will_save_change_to_description?
+
+    self.description = self.class.sanitized_description(description)
   end
 
   def set_opens_at
